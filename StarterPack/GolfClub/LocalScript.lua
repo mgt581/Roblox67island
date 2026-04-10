@@ -9,8 +9,6 @@ local TweenService = game:GetService("TweenService")
 
 local tool = script.Parent
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
 
 -- Wait for the RemoteEvent used to communicate swings to the server
 local golfFolder = ReplicatedStorage:WaitForChild("Golf")
@@ -18,7 +16,7 @@ local golfEvents = golfFolder:WaitForChild("GolfEvents")
 
 -- Power of the swing (studs/second applied to the ball)
 local SWING_POWER = 200
-local canSwing = true
+local canSwing = false
 local SWING_COOLDOWN = 1.5  -- seconds between swings
 
 -- Play a simple swing animation via CFrame tweening on the Handle
@@ -41,8 +39,14 @@ end
 -- Called when the player activates the tool (left-click while equipped)
 tool.Activated:Connect(function()
     if not canSwing then return end
-    canSwing = false
 
+    -- Ensure the character is still alive before swinging
+    local character = player.Character
+    if not character then return end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then return end
+
+    canSwing = false
     playSwingAnimation()
     golfEvents:FireServer("Swing", SWING_POWER)
 
@@ -51,6 +55,7 @@ tool.Activated:Connect(function()
     end)
 end)
 
+-- Re-resolve character each time the tool is equipped to avoid stale references
 tool.Equipped:Connect(function()
     canSwing = true
 end)
